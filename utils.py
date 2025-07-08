@@ -3,6 +3,9 @@ from PIL import Image
 import openai
 import os
 
+# Imposta manualmente il percorso di Tesseract
+pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"
+
 def extract_text_from_image(image_path):
     image = Image.open(image_path)
     text = pytesseract.image_to_string(image, lang='ita')
