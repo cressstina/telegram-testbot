@@ -5,49 +5,52 @@ from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, Con
 from utils import extract_answer_from_image, explain_answer_if_requested
 
 logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     level=logging.INFO
 )
 
-BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-
-# Comando /start
+# /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Ciao! Inviami una foto con domande a risposta multipla e ti dirò le risposte corrette.\nScrivi /spiega per avere spiegazioni.")
+    await update.message.reply_text("Ciao! Inviami una foto con le domande e ti darò le risposte.")
 
-# Comando /spiega
-async def spiega(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if context.user_data.get("last_image_text"):
-        explanation = explain_answer_if_requested(context.user_data["last_image_text"])
-        await update.message.reply_text(explanation)
-    else:
-        await update.message.reply_text("Non ho ancora ricevuto un'immagine. Inviamene una prima!")
-
-# Quando arriva una foto
-async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+# riceve foto
+async def handle_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Sto elaborando l'immagine...")
+    photo = update.message.photo[-1]
+    file = await photo.get_file()
+    image_path = "last_image.jpg"
+    await file.download_to_drive(image_path)
 
-    photo_file = await update.message.photo[-1].get_file()
-    photo_path = await photo_file.download_to_drive()
+    context.user_data["last_image_path"] = image_path
 
     try:
-        answers, full_text = extract_answer_from_image(photo_path)
-        context.user_data["last_image_text"] = full_text
-
-        if answers:
-            formatted = '\n'.join(f"{k}: {v}" for k, v in answers.items())
-            await update.message.reply_text(formatted)
-        else:
-            await update.message.reply_text("Non sono riuscito a trovare risposte nell'immagine.")
+        answers = extract_answer_from_image(image_path)
+        await update.message.reply_text(answers)
     except Exception as e:
-        logging.exception("Errore durante l'elaborazione della foto")
-        await update.message.reply_text("Si è verificato un errore durante l'elaborazione dell'immagine.")
+        await update.message.reply_text(f"Errore durante l'elaborazione: {str(e)}")
 
-if __name__ == '__main__':
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
+# /spiega
+async def spiega(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    image_path = context.user_data.get("last_image_path")
+    if not image_path:
+        await update.message.reply_text("Invia prima un'immagine per usare /spiega.")
+        return
+
+    try:
+        explanation = explain_answer_if_requested(image_path)
+        await update.message.reply_text(explanation)
+    except Exception as e:
+        await update.message.reply_text(f"Errore durante la spiegazione: {str(e)}")
+
+def main():
+    token = os.getenv("TELEGRAM_BOT_TOKEN")
+    app = ApplicationBuilder().token(token).build()
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("spiega", spiega))
-    app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
+    app.add_handler(MessageHandler(filters.PHOTO, handle_image))
 
     app.run_polling()
+
+if __name__ == "__main__":
+    main()
