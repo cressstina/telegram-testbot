@@ -1,3 +1,5 @@
 python-telegram-bot==20.6
-pillow
 pytesseract
+Pillow
+opencv-python
+openai
