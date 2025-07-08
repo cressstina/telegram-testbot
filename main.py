@@ -1,48 +1,48 @@
 import os
+import logging
 from telegram import Update
 from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
     MessageHandler,
-    ContextTypes,
     filters,
+    ContextTypes,
 )
-from process_image import extract_and_answer
 
-TELEGRAM_BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
-last_explanations = {}
+from utils import extract_answer_from_image, explain_answer_if_requested
 
-# /start
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
+)
+
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Ciao! Inviami una foto del test. Ti risponderò con le risposte corrette.")
+    await update.message.reply_text("Ciao! Inviami un'immagine con domande a scelta multipla.")
 
-# gestione immagini
-async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def handle_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Sto elaborando...")
 
-    photo_file = await update.message.photo[-1].get_file()
-    photo_path = await photo_file.download_to_drive()
+    photo = update.message.photo[-1]
+    file = await photo.get_file()
+    image_path = "/tmp/temp.jpg"
+    await file.download_to_drive(image_path)
 
-    results, explanations = extract_and_answer(photo_path)
+    answer = extract_answer_from_image(image_path)
+    await update.message.reply_text(answer)
 
-    chat_id = update.message.chat_id
-    last_explanations[chat_id] = explanations
-
-    await update.message.reply_text(results)
-
-# /spiega
-async def spiega(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = update.message.chat_id
-    if chat_id in last_explanations:
-        await update.message.reply_text(last_explanations[chat_id])
-    else:
-        await update.message.reply_text("Inviami prima una foto del test per ottenere una spiegazione.")
+async def handle_spiega(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    explanation = explain_answer_if_requested()
+    await update.message.reply_text(explanation)
 
 def main():
-    app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
+    app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
+
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("spiega", spiega))
-    app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
+    app.add_handler(CommandHandler("spiega", handle_spiega))
+    app.add_handler(MessageHandler(filters.PHOTO, handle_image))
+
     app.run_polling()
 
 if __name__ == "__main__":
