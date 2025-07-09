@@ -3,14 +3,16 @@ from PIL import Image
 import openai
 import os
 
-# Imposta manualmente il percorso di Tesseract
+# Imposta il percorso di Tesseract
 pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"
 
+# Estrai testo da immagine
 def extract_text_from_image(image_path):
     image = Image.open(image_path)
     text = pytesseract.image_to_string(image, lang='ita')
     return text
 
+# Estrai solo le risposte corrette dal testo OCR
 def extract_answer_from_image(image_path):
     text = extract_text_from_image(image_path)
 
@@ -27,8 +29,9 @@ TESTO:
 \"\"\"
 """
 
-    openai.api_key = os.getenv("OPENAI_API_KEY")
-    response = openai.ChatCompletion.create(
+    client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+    response = client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[
             {"role": "system", "content": "Sei un assistente che restituisce solo le risposte corrette a un test."},
@@ -39,6 +42,7 @@ TESTO:
 
     return response.choices[0].message.content.strip()
 
+# Spiega le risposte corrette
 def explain_answer_if_requested(image_path):
     text = extract_text_from_image(image_path)
 
@@ -50,8 +54,9 @@ TESTO:
 \"\"\"
 """
 
-    openai.api_key = os.getenv("OPENAI_API_KEY")
-    response = openai.ChatCompletion.create(
+    client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+    response = client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[
             {"role": "system", "content": "Sei un assistente che spiega brevemente le risposte corrette di un test."},
