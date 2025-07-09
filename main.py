@@ -20,7 +20,6 @@ async def handle_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
     file = await photo.get_file()
     image_path = "last_image.jpg"
     await file.download_to_drive(image_path)
-
     context.user_data["last_image_path"] = image_path
 
     try:
@@ -44,17 +43,19 @@ async def spiega(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 def main():
     token = os.getenv("TELEGRAM_BOT_TOKEN")
+    webhook_url = os.environ.get("RENDER_EXTERNAL_URL")
+
     app = ApplicationBuilder().token(token).build()
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("spiega", spiega))
     app.add_handler(MessageHandler(filters.PHOTO, handle_image))
 
-    # Webhook (per Web Service su Render)
+    # WEBHOOK su Render
     app.run_webhook(
         listen="0.0.0.0",
         port=int(os.environ.get("PORT", 8443)),
-        webhook_url=os.environ.get("RENDER_EXTERNAL_URL") + "/"
+        webhook_url=f"{webhook_url}/" if webhook_url else None
     )
 
 if __name__ == "__main__":
