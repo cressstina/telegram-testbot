@@ -50,16 +50,7 @@ def main():
     app.add_handler(CommandHandler("spiega", spiega))
     app.add_handler(MessageHandler(filters.PHOTO, handle_image))
 
-    # 🔁 Webhook (invece di run_polling)
-    port = int(os.environ.get("PORT", 8443))
-    webhook_url = f"https://{os.environ['RENDER_EXTERNAL_HOSTNAME']}/{token}"
-
-    app.run_webhook(
-        listen="0.0.0.0",
-        port=port,
-        url_path=token,
-        webhook_url=webhook_url
-    )
+    app.run_polling()  # <-- Torna a usare il polling per Render Background Worker
 
 if __name__ == "__main__":
     main()
