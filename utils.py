@@ -3,8 +3,10 @@ from PIL import Image
 import openai
 import os
 
-# Imposta manualmente il percorso di Tesseract
+# Percorso tesseract
 pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"
+
+client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 def extract_text_from_image(image_path):
     image = Image.open(image_path)
@@ -27,9 +29,8 @@ TESTO:
 \"\"\"
 """
 
-    openai.api_key = os.getenv("OPENAI_API_KEY")
-    response = openai.ChatCompletion.create(
-        model="gpt-4",  # o "gpt-3.5-turbo"
+    response = client.chat.completions.create(
+        model="gpt-4",
         messages=[
             {"role": "system", "content": "Sei un assistente che restituisce solo le risposte corrette a un test."},
             {"role": "user", "content": prompt}
@@ -50,9 +51,8 @@ TESTO:
 \"\"\"
 """
 
-    openai.api_key = os.getenv("OPENAI_API_KEY")
-    response = openai.ChatCompletion.create(
-        model="gpt-4",  # o "gpt-3.5-turbo"
+    response = client.chat.completions.create(
+        model="gpt-4",
         messages=[
             {"role": "system", "content": "Sei un assistente che spiega brevemente le risposte corrette di un test."},
             {"role": "user", "content": prompt}
