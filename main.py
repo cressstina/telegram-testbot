@@ -13,21 +13,6 @@ logging.basicConfig(
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Ciao! Inviami una foto con le domande e ti darò le risposte.")
 
-# riceve foto
-async def handle_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Sto elaborando l'immagine...")
-    photo = update.message.photo[-1]
-    file = await photo.get_file()
-    image_path = "last_image.jpg"
-    await file.download_to_drive(image_path)
-    context.user_data["last_image_path"] = image_path
-
-    try:
-        answers = extract_answer_from_image(image_path)
-        await update.message.reply_text(answers)
-    except Exception as e:
-        await update.message.reply_text(f"Errore durante l'elaborazione: {str(e)}")
-
 # /spiega
 async def spiega(update: Update, context: ContextTypes.DEFAULT_TYPE):
     image_path = context.user_data.get("last_image_path")
@@ -41,21 +26,34 @@ async def spiega(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         await update.message.reply_text(f"Errore durante la spiegazione: {str(e)}")
 
+# gestisce le immagini
+async def handle_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Sto elaborando l'immagine...")
+    photo = update.message.photo[-1]
+    file = await photo.get_file()
+    image_path = "last_image.jpg"
+    await file.download_to_drive(image_path)
+
+    context.user_data["last_image_path"] = image_path
+
+    try:
+        answers = extract_answer_from_image(image_path)
+        await update.message.reply_text(answers)
+    except Exception as e:
+        await update.message.reply_text(f"Errore durante l'elaborazione: {str(e)}")
+
 def main():
     token = os.getenv("TELEGRAM_BOT_TOKEN")
-    webhook_url = os.environ.get("RENDER_EXTERNAL_URL")
-
     app = ApplicationBuilder().token(token).build()
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("spiega", spiega))
     app.add_handler(MessageHandler(filters.PHOTO, handle_image))
 
-    # WEBHOOK su Render
     app.run_webhook(
         listen="0.0.0.0",
         port=int(os.environ.get("PORT", 8443)),
-        webhook_url=f"{webhook_url}/" if webhook_url else None
+        webhook_url=os.environ.get("RENDER_EXTERNAL_URL") + "/"
     )
 
 if __name__ == "__main__":
